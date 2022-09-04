@@ -4,7 +4,18 @@
       <img src="@/assets/logo.png" />
     </div>
     <div class="header-right">
-      <el-avatar @click="handleLogin"> user </el-avatar>
+      <el-avatar
+        v-if="store.store && store.store.state.result"
+        :src="store.store.state.result.headImgUrl"
+      />
+      <el-avatar @click="handleLogin" :icon="UserFilled" v-else />
+      <div class="username">
+        {{
+          store.store && store.store.state.result
+            ? store.store.state.result.nickname
+            : "未登录"
+        }}
+      </div>
     </div>
   </header>
   <div class="client-main">
@@ -25,12 +36,14 @@
       </div>
       <div class="sidebar-2">222</div>
     </div>
-    <el-dialog v-model="dialogVisible" title="" width="60%">
+    <div class="main-workspace">333</div>
+    <el-dialog v-model="dialogVisible" title="" width="40%">
       <ClientLogin :base64="base64"></ClientLogin>
     </el-dialog>
   </div>
 </template>
 <script setup>
+import { UserFilled } from "@element-plus/icons-vue";
 import { ref, onMounted, reactive } from "vue";
 import ClientLogin from "../../components/client/ClientLogin.vue";
 import Login from "@/api/api";
@@ -49,27 +62,33 @@ onMounted(() => {
   uuid.value = (
     Math.floor(Math.random() * (999999 - 100000 + 1)) + 100000
   ).toString();
-  Login.getQR(uuid.value).then((res) => {
-    base64.value = res.data.result;
-  });
-  timer.value = window.setInterval(() => {
-    checkIfScan();
-  }, 1000);
+  if (localStorage.getItem("result")) {
+    store.store.commit("initResult", localStorage.getItem("result"));
+  } else {
+    Login.getQR(uuid.value).then((res) => {
+      base64.value = res.data.result;
+    });
+    timer.value = window.setInterval(() => {
+      checkIfScan();
+    }, 1000);
+  }
 });
 const dialogVisible = ref(false);
 const handleLogin = () => {
   dialogVisible.value = true;
 };
 const checkIfScan = () => {
-  Login.checkIfScan(uuid.value).then((res) => {
-    if (res.data.code == 200) {
-      window.clearInterval(timer.value)
-      store.store.commit("reviseResult", res.data.result);
-      console.log('OKKKKKK')
-    }
-  }).catch((res)=>{
-    console.log('BAD NETWORK'+res)
-  });
+  Login.checkIfScan(uuid.value)
+    .then((res) => {
+      if (res.data.code == 200) {
+        window.clearInterval(timer.value);
+        store.store.commit("reviseResult", res.data.result);
+        dialogVisible.value = false;
+      }
+    })
+    .catch((res) => {
+      console.log("BAD NETWORK" + res);
+    });
 };
 </script>
 <style lang="scss" scoped>
@@ -96,6 +115,11 @@ const checkIfScan = () => {
     width: 350px;
     height: 100%;
     border-radius: 0 0 0 30px;
+    .username {
+      margin-left: 20px;
+      color: #d9e5f5;
+      font-size: 22px;
+    }
   }
 }
 .client-main {
@@ -152,6 +176,19 @@ const checkIfScan = () => {
     .sidebar-2 {
       height: 100%;
     }
+  }
+  .main-workspace {
+    height: calc(100% - 20px);
+    width: calc(100vw - 550px);
+    background: #c4c4c45f;
+    background-position: center;
+    background-image: linear-gradient(white 2px, transparent 0),
+      linear-gradient(90deg, white 2px, transparent 0),
+      linear-gradient(hsla(0, 0%, 100%, 0.3) 1px, transparent 0),
+      linear-gradient(90deg, hsla(0, 0%, 100%, 0.3) 1px, transparent 0);
+    background-size: 75px 75px, 75px 75px, 15px 15px, 15px 15px;
+    border-radius: 10px;
+    margin: 10px;
   }
 }
 :deep(.el-dialog) {
